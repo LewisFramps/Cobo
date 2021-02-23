@@ -1,9 +1,5 @@
 cmake_minimum_required(VERSION 3.0.2)
-<<<<<<< HEAD
-project(Cobo)
-=======
 project(sdp)
->>>>>>> master
 
 ## Compile as C++11, supported in ROS Kinetic and newer
 # add_compile_options(-std=c++11)
@@ -12,16 +8,11 @@ project(sdp)
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
 find_package(catkin REQUIRED COMPONENTS
-<<<<<<< HEAD
-  rospy
-  std_msgs
-=======
    roscpp
    rospy
    std_msgs
    message_generation
    message_runtime
->>>>>>> master
 )
 
 ## System dependencies are found with CMake's conventions
@@ -65,19 +56,11 @@ find_package(catkin REQUIRED COMPONENTS
 # )
 
 ## Generate services in the 'srv' folder
-<<<<<<< HEAD
-# add_service_files(
-#   FILES
-#   Service1.srv
-#   Service2.srv
-# )
-=======
 add_service_files(
    FILES
    booking.srv
    getState.srv
 )
->>>>>>> master
 
 ## Generate actions in the 'action' folder
 # add_action_files(
@@ -87,17 +70,10 @@ add_service_files(
 # )
 
 ## Generate added messages and services with any dependencies listed here
-<<<<<<< HEAD
-# generate_messages(
-#   DEPENDENCIES
-#   std_msgs
-# )
-=======
 generate_messages(
    DEPENDENCIES
    std_msgs  # Or other packages containing msgs
 )
->>>>>>> master
 
 ################################################
 ## Declare ROS dynamic reconfigure parameters ##
@@ -130,13 +106,8 @@ generate_messages(
 ## DEPENDS: system dependencies of this project that dependent projects also need
 catkin_package(
 #  INCLUDE_DIRS include
-<<<<<<< HEAD
-#  LIBRARIES Cobo
-#  CATKIN_DEPENDS rospy std_msgs
-=======
 #  LIBRARIES sdp
 #  CATKIN_DEPENDS other_catkin_pkg
->>>>>>> master
 #  DEPENDS system_lib
 )
 
@@ -148,20 +119,12 @@ catkin_package(
 ## Your package locations should be listed before other locations
 include_directories(
 # include
-<<<<<<< HEAD
-  ${catkin_INCLUDE_DIRS}
-=======
 # ${catkin_INCLUDE_DIRS}
->>>>>>> master
 )
 
 ## Declare a C++ library
 # add_library(${PROJECT_NAME}
-<<<<<<< HEAD
-#   src/${PROJECT_NAME}/Cobo.cpp
-=======
 #   src/${PROJECT_NAME}/sdp.cpp
->>>>>>> master
 # )
 
 ## Add cmake target dependencies of the library
