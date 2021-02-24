@@ -9,22 +9,21 @@ from std_msgs.msg import String
 from sdp.srv import getState
 from rooms import *
 
-#####AAAAAA Issues:
-
-#Class designed to receive messages from the world and therefore trigger the correct responses
+#Main Class that controls the robot(s). Subscribes to several ROS topics and publishes on several more
 class controller:
 
     robots = list() #Array containing all the robots
-    booths = list()
-    transitArea = None
+    booths = list() #List of the booth objects
+    transitArea = None #The objects for the other areas
     reception = None
     dropOff = None
     exitArea = None
     idleTimeout = 180 #The length in seconds representing how long a robot can be idle before it raises concern
     idleCheckInterval = 60 #How often the robots are checked for being idle
+    jsonPublishFrequency = 10 #How often (in seconds) the JSON details about the systems state is published
 
-    #Init, takes an optional list of robot ids and an optional number of booths
-    def __init__(self, robot_ids = ["0001"], numBooths = 1):
+    #Init, takes an list of robot ids and  number of booths
+    def __init__(self, robot_ids, numBooths):
         #Rospy Init
         rospy.init_node("controller")
         self.RtoS_sub = rospy.Subscriber("RtoS", String, callback=self.callback, queue_size=20) #Creates the sub and pub objects
@@ -88,7 +87,7 @@ class controller:
                 return robot._state.toString()
         return None
 
-    #Connected to a Timer and publishes JSON representing the internal state of the Controller
+    #Handler for a Timer and publishes JSON representing the internal state of the Controller, intended to be used by the console
     def getJSON(self, event):
         robotDicts = list()
         for robot in self.robots:
@@ -213,7 +212,7 @@ def main(args):
     robots = args[1].split(",")
     control = controller(robots,args[2])
     rospy.Timer(rospy.Duration(control.idleCheckInterval), control.idleCheck)
-    rospy.Timer(rospy.Duration(5), control.getJSON)
+    rospy.Timer(rospy.Duration(control.jsonPublishFrequency), control.getJSON)
     try:
         rospy.spin()
     except KeyboardInterrupt:
