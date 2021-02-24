@@ -60,8 +60,42 @@ class Robot:
             self._controller.releaseReservations(self, "Booth")
         elif newState.toString() == "Movement(DropOff)":
             self._controller.releaseReservations(self, "DropOff")
+        elif newState.toString() == "AtDropOff":
+            self._controller.StoC_pub.publish(self.robot_id + ",dropOff")
+        elif newState.toString() == "WaitingForAssistance":
+            self._controller.StoC_pub.publish(self.robot_id + ",help," + self.getLocation(newState.stateAtCall))
 
     def toDict(self):
         return {"ID":self.robot_id, "Battery Level":self.batteryLevel, "Last Message Time":self.timeOfLastMessage,
             "State":self._state.toDict()}
         
+    #Works out the location based on a state
+    def getLocation(self,state):
+        if state.toString()[0:7] == "Movement":
+            return "Transit Area"
+        elif state.toString() == "Testing":
+            return "Booth:" + self.whichBooth()
+        elif state.toString() == "AtExit":
+            return "Exit"
+        elif state.toString() == "AtDropOff":
+            return "DropOff"
+        elif state.toString() == "WaitingAtReception":
+            return "Reception"
+        elif state.toString() == "ReadyForMovement(Booth)":
+            return "Reception"
+        elif state.toString() == "ReadyForMovement(Exit)":
+            return "Booth:" + self.whichBooth()
+        elif state.toString() == "ReadyForMovement(DropOff)":
+            return "Exit"
+        elif state.toString() == "ReadyForMovement(Reception)":
+            return "DropOff"
+        else:
+            return "N/A"
+
+    #Works out what booth this robot is in
+    def whichBooth(self):
+        for booth in self._controller.booths:
+            if booth.hasReservation(self.robot_id):
+                return booth.id
+        else: 
+            return "unknown"
