@@ -19,6 +19,7 @@ class Room(ABC):
     def reserve(self, robot, hasHuman):
         self.lock.acquire()
         if (robot in self.humans) or (robot in self.robots): #If it is already reserved
+            self.lock.release()
             return True
         if hasHuman:
             if len(self.humans) < self.capacityHuman: #If there is capcity for a human

@@ -130,9 +130,9 @@ class controller:
                     if booth.hasCapcity(robot, hasHuman): #If a booth has capcity
                         booth.reserve(robot, hasHuman) #Its reserved
                         print("[RESERVATION] Booth: " + str(booth.id) + " reserved by " + str(robot.robot_id))
+                        self.reserveLock.release()
                         self.requestRoom(robot, "TransitArea", hasHuman) #Then the transit area is also reserved
                         self.StoR_pub.publish(String(str(robot.robot_id) + ",moveTo[location]")) #Command sent
-                        self.reserveLock.release()
                         return
             elif roomType == "TransitArea":
                 if self.transitArea.hasReservation(robot, hasHuman):
@@ -155,9 +155,9 @@ class controller:
                     if self.exitArea.hasCapcity(robot, hasHuman):
                         self.exitArea.reserve(robot, hasHuman)
                         print("[RESERVATION] Exit Area reserved by " + robot.robot_id)
+                        self.reserveLock.release()
                         self.requestRoom(robot, "TransitArea", hasHuman)
                         self.StoR_pub.publish(String(str(robot.robot_id) + ",moveTo[location]"))
-                        self.reserveLock.release()
                         return
             elif roomType == "DropOff":    
                 if self.dropOff.hasReservation(robot, hasHuman):
@@ -169,9 +169,9 @@ class controller:
                     if self.dropOff.hasCapcity(robot, hasHuman):
                         self.dropOff.reserve(robot, hasHuman)
                         print("[RESERVATION] DropOff Area reserved by " + robot.robot_id)
+                        self.reserveLock.release()
                         self.requestRoom(robot, "TransitArea", hasHuman)
                         self.StoR_pub.publish(String(str(robot.robot_id) + ",moveTo[location]"))
-                        self.reserveLock.release()
                         return
             elif roomType == "Reception":    
                 if self.reception.hasReservation(robot, hasHuman):
@@ -183,13 +183,14 @@ class controller:
                     if self.reception.hasCapcity(robot, hasHuman):
                         self.reception.reserve(robot, hasHuman)
                         print("[RESERVATION] Reception Area reserved by " + robot.robot_id)
+                        self.reserveLock.release()
                         self.requestRoom(robot, "TransitArea", hasHuman)
                         self.StoR_pub.publish(String(str(robot.robot_id) + ",moveTo[location]"))
-                        self.reserveLock.release()
                         return
             else:
                 print("Error in reservation code at controller level")
             self.reserveLock.release() #If it reaches here then it has failed to get a reservation, released the lock
+            print("Shouldn't be here")
             sleep(5) #Waits 5 seconds and will try again
 
     """Method clears all reservations for a given robot. Typically run when a robot arrives at
