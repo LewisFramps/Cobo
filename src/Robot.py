@@ -21,7 +21,7 @@ class Robot:
         self.timeOfLastMessage = time()
 
     """ Method handles a message that is passed to the robot, simply passes that
-    message to the robot's current state
+    message to the robot's current state. Also logs the time.
 
     :param message: A string containing the message (just the message, do not include the robots ID)
     """
@@ -30,14 +30,14 @@ class Robot:
         self._state.handleMessage(message)
 
     """Method transitions the robot from its current state to a provided new state. It also may triggers
-    actions that related to the change in state.
+    actions that related to the change in state. Typically called by the outgoing state.
 
     :param newState: The state that is being transitioned into
     """
     def transition(self, newState):
         self._state = newState #Updates the state
         self._state._context = self #Includes reference to this object in the state
-        print("[STATE CHANGE] Robot: " + self.robot_id + " has transitions to state: " + newState.toString())
+        print("[STATE CHANGE] Robot: " + self.robot_id + " has transitions to state: " + newState.toString()) #Logging
 
         #Below are any actions that need to be carried out based on a change of state
         if newState.toString() == "ReadyForMovement(Booth)":
@@ -61,10 +61,11 @@ class Robot:
         elif newState.toString() == "Movement(DropOff)":
             self._controller.releaseReservations(self, "DropOff")
         elif newState.toString() == "AtDropOff":
-            self._controller.StoC_pub.publish(self.robot_id + ",dropOff")
+            self._controller.StoC_pub.publish(self.robot_id + ",dropOff") #Publishes to console to tell it that a robot is at the DropOff
         elif newState.toString() == "WaitingForAssistance":
-            self._controller.StoC_pub.publish(self.robot_id + ",help," + self.getLocation(newState.stateAtCall))
+            self._controller.StoC_pub.publish(self.robot_id + ",help," + self.getLocation(newState.stateAtCall)) #Publishes to console to alert staff help is needed
 
+    #Gets a dictionary representation of the robot, used to generate JSON
     def toDict(self):
         return {"ID":self.robot_id, "Battery Level":self.batteryLevel, "Last Message Time":self.timeOfLastMessage,
             "State":self._state.toDict()}

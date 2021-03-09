@@ -7,24 +7,24 @@ from Robot import Robot
 from States import WaitingAtReception
 from std_msgs.msg import String
 from sdp.srv import getState
-from rooms import *
+from rooms import Reception, TransitArea, DropOff, ExitArea, Booth
+from threading import Lock
 
-#####AAAAAA Issues:
-
-#Class designed to receive messages from the world and therefore trigger the correct responses
+#Main Class that controls the robot(s). Subscribes to several ROS topics and publishes on several more
 class controller:
 
     robots = list() #Array containing all the robots
-    booths = list()
-    transitArea = None
+    booths = list() #List of the booth objects
+    transitArea = None #The objects for the other areas
     reception = None
     dropOff = None
     exitArea = None
     idleTimeout = 180 #The length in seconds representing how long a robot can be idle before it raises concern
     idleCheckInterval = 60 #How often the robots are checked for being idle
+    jsonPublishFrequency = 10 #How often (in seconds) the JSON details about the systems state is published
 
-    #Init, takes an optional list of robot ids and an optional number of booths
-    def __init__(self, robot_ids = ["0001"], numBooths = 1):
+    #Init, takes an list of robot ids and  number of booths
+    def __init__(self, robot_ids, numBooths):
         #Rospy Init
         rospy.init_node("controller")
         self.RtoS_sub = rospy.Subscriber("RtoS", String, callback=self.callback, queue_size=20) #Creates the sub and pub objects
@@ -43,6 +43,8 @@ class controller:
         self.exitArea = ExitArea("1", self.transitArea)
         for i in range(1,int(numBooths) + 1):
             self.booths.append(Booth(i, self.transitArea)) #Generates all the booths
+        #Builds a few locks
+        self.reserveLock = Lock()
 
     #Receives any RtoS messages and passes them to the respective robot
     def callback(self, data):
@@ -88,7 +90,7 @@ class controller:
                 return robot._state.toString()
         return None
 
-    #Connected to a Timer and publishes JSON representing the internal state of the Controller
+    #Handler for a Timer and publishes JSON representing the internal state of the Controller, intended to be used by the console
     def getJSON(self, event):
         robotDicts = list()
         for robot in self.robots:
@@ -114,77 +116,82 @@ class controller:
     :returns None
     """
     def requestRoom(self, robot, roomType, hasHuman):
-        if roomType == "Booth":
-            for booth in self.booths: #First it checks each booth
-                if booth.hasReservation(robot, hasHuman): #To see if there is already a reservation
-                    print("[RESERVATION] Booth: " + booth.id + " re-reserved by " + robot.robot_id)
-                    self.StoR_pub.publish(String(str(robot.robot_id) + ",moveTo[location]")) #If there is then the command is sent
-                    return
-            #If there is no reservation
-            while True: #Kept in loop
+        while True: #Threads are kept in this function until they have gotten a reservation
+            self.reserveLock.acquire() #Lock must be acquired to access the reservation section
+            if roomType == "Booth":
+                for booth in self.booths: #First it checks each booth
+                    if booth.hasReservation(robot, hasHuman): #To see if there is already a reservation
+                        print("[RESERVATION] Booth: " + booth.id + " re-reserved by " + robot.robot_id)
+                        self.StoR_pub.publish(String(str(robot.robot_id) + ",moveTo[location]")) #If there is then the command is sent
+                        self.reserveLock.release()
+                        return
+                #If there is no reservation
                 for booth in self.booths:
                     if booth.hasCapcity(robot, hasHuman): #If a booth has capcity
                         booth.reserve(robot, hasHuman) #Its reserved
                         print("[RESERVATION] Booth: " + str(booth.id) + " reserved by " + str(robot.robot_id))
+                        self.reserveLock.release()
                         self.requestRoom(robot, "TransitArea", hasHuman) #Then the transit area is also reserved
                         self.StoR_pub.publish(String(str(robot.robot_id) + ",moveTo[location]")) #Command sent
                         return
-                sleep(5) #If there is capcity in no booth then the method sleeps for 5 seconds and tries again
-        elif roomType == "TransitArea":
-            if self.transitArea.hasReservation(robot, hasHuman):
-                print("[RESERVATION] Transit Area re-reserved by " + robot.robot_id)
-                return
-            else:
-                while True:
+            elif roomType == "TransitArea":
+                if self.transitArea.hasReservation(robot, hasHuman):
+                    print("[RESERVATION] Transit Area re-reserved by " + robot.robot_id)
+                    self.reserveLock.release()
+                    return
+                else:
                     if self.transitArea.hasCapcity(robot, hasHuman):
                         self.transitArea.reserve(robot, hasHuman)
                         print("[RESERVATION] Transit Area reserved by " + robot.robot_id)
+                        self.reserveLock.release()
                         return
-                    sleep(5)
-        elif roomType == "ExitArea":
-            if self.exitArea.hasReservation(robot, hasHuman):
-                print("[RESERVATION] Exit Area re-reserved by " + robot.robot_id)
-                self.StoR_pub.publish(String(str(robot.robot_id) + ",moveTo[location]"))
-                return
-            else:
-                while True:
+            elif roomType == "ExitArea":
+                if self.exitArea.hasReservation(robot, hasHuman):
+                    print("[RESERVATION] Exit Area re-reserved by " + robot.robot_id)
+                    self.StoR_pub.publish(String(str(robot.robot_id) + ",moveTo[location]"))
+                    self.reserveLock.release()
+                    return
+                else:
                     if self.exitArea.hasCapcity(robot, hasHuman):
                         self.exitArea.reserve(robot, hasHuman)
                         print("[RESERVATION] Exit Area reserved by " + robot.robot_id)
+                        self.reserveLock.release()
                         self.requestRoom(robot, "TransitArea", hasHuman)
                         self.StoR_pub.publish(String(str(robot.robot_id) + ",moveTo[location]"))
                         return
-                    sleep(5)
-        elif roomType == "DropOff":    
-            if self.dropOff.hasReservation(robot, hasHuman):
-                print("[RESERVATION] DropOff Area re-reserved by " + robot.robot_id)
-                self.StoR_pub.publish(String(str(robot.robot_id) + ",moveTo[location]"))
-                return
-            else:
-                while True:
+            elif roomType == "DropOff":    
+                if self.dropOff.hasReservation(robot, hasHuman):
+                    print("[RESERVATION] DropOff Area re-reserved by " + robot.robot_id)
+                    self.StoR_pub.publish(String(str(robot.robot_id) + ",moveTo[location]"))
+                    self.reserveLock.release()
+                    return
+                else:
                     if self.dropOff.hasCapcity(robot, hasHuman):
                         self.dropOff.reserve(robot, hasHuman)
                         print("[RESERVATION] DropOff Area reserved by " + robot.robot_id)
+                        self.reserveLock.release()
                         self.requestRoom(robot, "TransitArea", hasHuman)
                         self.StoR_pub.publish(String(str(robot.robot_id) + ",moveTo[location]"))
                         return
-                    sleep(5)
-        elif roomType == "Reception":    
-            if self.reception.hasReservation(robot, hasHuman):
-                print("[RESERVATION] Reception Area re-reserved by " + robot.robot_id)
-                self.StoR_pub.publish(String(str(robot.robot_id) + ",moveTo[location]"))
-                return
-            else:
-                while True:
+            elif roomType == "Reception":    
+                if self.reception.hasReservation(robot, hasHuman):
+                    print("[RESERVATION] Reception Area re-reserved by " + robot.robot_id)
+                    self.StoR_pub.publish(String(str(robot.robot_id) + ",moveTo[location]"))
+                    self.reserveLock.release()
+                    return
+                else:
                     if self.reception.hasCapcity(robot, hasHuman):
                         self.reception.reserve(robot, hasHuman)
                         print("[RESERVATION] Reception Area reserved by " + robot.robot_id)
+                        self.reserveLock.release()
                         self.requestRoom(robot, "TransitArea", hasHuman)
                         self.StoR_pub.publish(String(str(robot.robot_id) + ",moveTo[location]"))
                         return
-                    sleep(5)
-        else:
-            print("Error in reservation code at controller level")
+            else:
+                print("Error in reservation code at controller level")
+            self.reserveLock.release() #If it reaches here then it has failed to get a reservation, released the lock
+            print("Shouldn't be here")
+            sleep(5) #Waits 5 seconds and will try again
 
     """Method clears all reservations for a given robot. Typically run when a robot arrives at
     a destination.
@@ -213,7 +220,7 @@ def main(args):
     robots = args[1].split(",")
     control = controller(robots,args[2])
     rospy.Timer(rospy.Duration(control.idleCheckInterval), control.idleCheck)
-    rospy.Timer(rospy.Duration(5), control.getJSON)
+    rospy.Timer(rospy.Duration(control.jsonPublishFrequency), control.getJSON)
     try:
         rospy.spin()
     except KeyboardInterrupt:

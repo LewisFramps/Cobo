@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-
+from threading import Lock
 from abc import ABC, abstractmethod
 class Room(ABC):
 
@@ -9,6 +9,7 @@ class Room(ABC):
     transitArea = None
     humans = None #Holds the robot that has reserved the area with a human
     robots = None #Holds the robots that have reserved the area without a human
+    lock = None   #Lock that prevents a room from having more than 1 thread reserving a room which can cause issues
 
     """Reserves the room for the given robot if there is capcity
 
@@ -16,26 +17,34 @@ class Room(ABC):
     :param hasHuman: Boolean, true if there is a human following the robot, false if robot is alone
     """
     def reserve(self, robot, hasHuman):
+        self.lock.acquire()
         if (robot in self.humans) or (robot in self.robots): #If it is already reserved
+            self.lock.release()
             return True
         if hasHuman:
             if len(self.humans) < self.capacityHuman: #If there is capcity for a human
                 self.humans.append(robot)
+                self.lock.release()
                 return True
             else:
+                self.lock.release()
                 return False
         else:
             if len(self.robots) + len(self.humans) < self.capacityRobot: #If there is room for a robot, must consider the robots with humans
                 self.robots.append(robot)
+                self.lock.release()
                 return True
             else:
+                self.lock.release()
                 return False
 
     def clearReservation(self, robot):
+        self.lock.acquire()
         if robot in self.humans:
             self.humans.remove(robot)
         if robot in self.robots:
             self.robots.remove(robot)
+        self.lock.release()
 
     def hasCapcity(self, robot, hasHuman):
         if hasHuman:
@@ -80,6 +89,7 @@ class Booth(Room):
         self.transitArea = transit
         self.humans = list()
         self.robots = list()
+        self.lock = Lock()
 
 class Reception(Room):
 
@@ -90,6 +100,8 @@ class Reception(Room):
         self.transitArea = transit
         self.humans = list()
         self.robots = list()
+        self.lock = Lock()
+
 
 class DropOff(Room):
 
@@ -100,6 +112,7 @@ class DropOff(Room):
         self.transitArea = transit
         self.humans = list()
         self.robots = list()
+        self.lock = Lock()
 
 class TransitArea(Room):
 
@@ -109,6 +122,7 @@ class TransitArea(Room):
         self.capacityRobot = 100
         self.humans = list()
         self.robots = list()
+        self.lock = Lock()
 
 class ExitArea(Room):
 
@@ -119,3 +133,4 @@ class ExitArea(Room):
         self.transitArea = transit
         self.humans = list()
         self.robots = list()
+        self.lock = Lock()

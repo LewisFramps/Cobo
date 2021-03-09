@@ -23,10 +23,12 @@ class State(ABC):
         else:
             return False #If it can't handle the message it returns false
 
+    #Function to get a string representation
     @abstractmethod
     def toString(self):
         pass
 
+    #Builds a dictionary representation used to make JSON
     def toDict(self, name, destination):
         if destination == None:
             return {"State":name, "Destination":"N/A"}
