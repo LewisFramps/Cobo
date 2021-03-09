@@ -71,7 +71,7 @@ class controller:
         parts = data.data.split(",")
         print("[MESSAGE[ Message has arrived from Console, message reads robot: " + parts[0] + " - " + parts[1])
         for robot in self.robots:
-            if Robot.robot_id == parts[0]:
+            if robot.robot_id == parts[0]:
                 robot.handleMessage(parts[1])
                 return
         print("Robot : \'" + parts[0] + "\' not found in controller")
