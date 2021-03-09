@@ -100,5 +100,7 @@ class Testing:
         
     def testHelp2(self):
         self.CtoS_pub.publish("b,helpCompleteContinue")
+        response = self.getStateService("b").state
+        assert response == "Movement(Booth)" #Check of the help state
 
 
