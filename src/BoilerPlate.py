@@ -23,7 +23,7 @@ class Example:
 
     def callback2(self, event):
         rospy.wait_for_service("getState")
-        getStateFunc = rospy.ServiceProxy("Controller", getState)
+        getStateFunc = rospy.ServiceProxy("getState", getState)
         reponse = getStateFunc("hahahahahah")
 
 
