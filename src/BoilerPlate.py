@@ -18,7 +18,8 @@ class Example:
     def callback1(self, data):
         message = data.data
         print(message)
-        self.pub1.publish("aaaaaaaaaa")
+        msg = String(data="aaaaaaaaaa")
+        self.pub1.publish(msg)
         self.pi = "e"
 
     def callback2(self, event):
