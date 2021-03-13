@@ -13,7 +13,7 @@ import csv
 ### ADAPTED FROM:
 ### https://stackoverflow.com/questions/18406570/python-record-audio-on-detected-sound/18423188
 
-Threshold = 12
+Threshold = 18
 
 SHORT_NORMALIZE = (1.0/32768.0)
 chunk = 1024
@@ -22,7 +22,7 @@ CHANNELS = 1
 RATE = 16000
 swidth = 2
 
-TIMEOUT_LENGTH = 1.5
+TIMEOUT_LENGTH = 0.5
 
 f_name_directory = r'.\\records'
 
@@ -103,32 +103,70 @@ class Recorder:
         play_stream.start_stream()
         play_stream.write(data)
 
-        time.sleep(1.0)
+        # time.sleep(1.0)
 
         play_stream.close()
         
         self.is_playing = False
         # self.audio.terminate()
 
-if __name__ == "__main__":
+def main():
     a = Recorder()
     status = 0
     while True:
         audio = a.listen()
         print(f'outgoing status is {status}')
-        response = a.aws_client.sendAudio(audio, status)
-        sesh = response['sessionAttributes']
-        status = int(sesh['status'])
+        response = a.aws_client.respond(audio, status)
+        session_attributes = response['sessionAttributes']
+
+        status = int(session_attributes['status']) if 'status' in session_attributes else 0
         print(f'incoming status : {status}')
         if status == 2:
-            print('activate QR scanner')
-            time.sleep(5)
-            print('scanning complete')
-            status = 3
+            scan_item_id = int(session_attributes['scanItemId'])
+            if scan_item_id == 2:
+                lex_audio = response['audioStream'].read()
+                a.playAudio(lex_audio)
+
+                print('activate QR scanner')
+                time.sleep(4)
+                print('scanning complete')
+                status = 1
+                session_attributes['status'] = status
+                response = a.aws_client.respond('999', status)
+
+            else:
+                a.playAudio(a.aws_client.toAudio('scanning completed')['AudioStream'].read())
+                if scan_item_id == 0:
+                    status = 3
+                elif scan_item_id == 1:
+                    status = 4
+
+                session_attributes['status'] = status
+                response = a.aws_client.respond('.*.', status)
+
+            
             print(f'status :  {status}')
-            response = a.aws_client.sendCode('.*.', status)
-            lex_audio = response['audioStream'].read()
+            
+            lex_audio = response['audioStream'].read() ## plays response
         else:
             lex_audio = response['audioStream'].read() ## plays response
-
         a.playAudio(lex_audio)
+ 
+'''
+cobo proactive for:
+- wear mask
+- follow me to booth
+- testing fdone, follow to exit
+- we are in exit good bye -fak of-
+'''
+
+def test():
+    a = Recorder()
+    response = a.aws_client.toAudio("hi my name is amy and you are watching the disney channel")
+    sound = response["AudioStream"].read()
+    a.playAudio(sound)
+
+if __name__ == "__main__":
+    # test()
+
+    main()

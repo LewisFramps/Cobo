@@ -6,26 +6,26 @@ class SpeechClient:
 
         self.polly_client = boto3.client('polly')
 
-    def sendAudio(self, audio, session_status):
+    def respond(self, data, session_status):
         response = self.lex_client.post_content(
             botName="CoBo",
-            botAlias="beta",
-            userId="aaabkjsdgkdsjn", #### update later with cobo id if we have multiple robots
-            contentType="audio/l16; rate=16000; channels=1",
+            botAlias="charlie",
+            userId="asdasada", #### update later with cobo id if we have multiple robots
+            contentType= "text/plain; charset=utf-8" if type(data) == type('string') else "audio/l16; rate=16000; channels=1",
             accept="audio/pcm",
-            inputStream=audio
+            inputStream=data,
+            sessionAttributes= {'status' : session_status}
         )
+        print(response["intentName"] if "intentName" in response else response)
+        print(response["botVersion"])
         return response
 
-    def sendCode(self, string, session_status):
-        response = self.lex_client.post_content(
-            botName="CoBo",
-            botAlias="beta",
-            userId="aaabkjsdgkdsjn", #### update later with cobo id if we have multiple robots
-            contentType="text/plain; charset=utf-8",
-            accept="audio/pcm",
-            inputText=string,
-            sessionAttributes= {'status' : session_status}
+    def toAudio(self, text):
+        response = self.polly_client.synthesize_speech(
+            Text=text,
+            VoiceId="Amy",
+            Engine="neural",
+            OutputFormat="pcm",
         )
         return response
 
