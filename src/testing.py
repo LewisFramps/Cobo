@@ -38,8 +38,20 @@ class Testing:
         assert response.state == "WaitingAtReception"
 
     #Tests T1-T7 tests the full rotation through a cycle
-    def testT1(self):
-        self.RtoS_pub.publish("d,checkinComplete")
+    def testT1_1(self):
+        self.RtoS_pub.publish("d,personAtReception")
+        sleep(0.5)
+        response = self.getStateService("d")
+        assert response.state == "LookingForQRCode"
+
+    def testT1_2(self):
+        self.RtoS_pub.publish("d,QRCodeScanned")
+        sleep(0.5)
+        response = self.getStateService("d")
+        assert response.state == "LookingForRegisterConfirmation"
+
+    def test1_3(self):
+        self.RtoS_pub.publish("d,registrationConfirmed")
         sleep(1)
         response = self.getStateService("d")
         assert response.state == "Movement(Booth)"
@@ -91,7 +103,10 @@ class Testing:
     #Testing the Help subsystem
     def testHelp1(self):
         #First the robot is moved off the reception
-        self.RtoS_pub.publish("b,checkinComplete")
+        self.RtoS_pub.publish("b,personAtReception")
+        self.RtoS_pub.publish("b,QRCodeScanned")
+        self.RtoS_pub.publish("b,registrationConfirmed")
+
         sleep(1)
         self.RtoS_pub.publish("b,helpRequired") #Help is triggered
         sleep(0.5)

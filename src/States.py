@@ -40,8 +40,8 @@ class State(ABC):
 class WaitingAtReception(State):
 
     def handleMessage(self, message):
-        if message == "checkinComplete":
-            self._context.transition(ReadyForMovement("Booth"))
+        if message == "personAtReception":
+            self._context.transition(LookingForQRCode())
         elif message[0:12] == "batteryLevel" and int(message[13:16]) < 20:
             self._context.transition(Charging())
         elif super().genericHandleMessage(message, self): #If the generic answers can handle it then
@@ -54,6 +54,38 @@ class WaitingAtReception(State):
 
     def toDict(self):
         return super().toDict("WaitingAtReception", None)
+
+class LookingForQRCode(State):
+
+    def handleMessage(self, message):
+        if message == "QRCodeScanned":
+            self._context.transition(LookingForRegisterConfirmation())
+        elif super().genericHandleMessage(message, self): #If the generic answers can handle it then
+            return #This can stop
+        else:
+            print("Message doesn't make sense")
+
+    def toString(self):
+        return "LookingForQRCode"
+
+    def toDict(self):
+        return super().toDict("LookingForQRCode", None)
+
+class LookingForRegisterConfirmation(State):
+
+    def handleMessage(self, message):
+        if message == "registrationConfirmed":
+            self._context.transition(ReadyForMovement("Booth"))
+        elif super().genericHandleMessage(message, self): #If the generic answers can handle it then
+            return #This can stop
+        else:
+            print("Message doesn't make sense")
+
+    def toString(self):
+        return "LookingForRegisterConfirmation"
+
+    def toDict(self):
+        return super().toDict("LookingForRegisterConfirmation", None)
 
 class ReadyForMovement(State):
 
